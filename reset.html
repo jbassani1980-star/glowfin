@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>GlowFin — Reset</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
+<script src="https://apis.google.com/js/api.js"></script>
+<script src="https://accounts.google.com/gsi/client"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'IBM Plex Sans',sans-serif;background:#ede8e1;background-image:repeating-linear-gradient(0deg,transparent,transparent 23px,rgba(120,90,60,.04) 23px,rgba(120,90,60,.04) 24px);display:flex;align-items:center;justify-content:center;min-height:100vh;}
+.box{background:#f5f1eb;border:1px solid #c8bfb0;border-top:3px solid #7c4d2a;padding:40px;width:500px;max-width:94vw;box-shadow:0 4px 20px rgba(30,20,10,.15);}
+.logo{font-size:22px;font-weight:700;color:#1e1410;margin-bottom:4px;letter-spacing:.3px;}
+.logo span{color:#7c4d2a;}
+.sub{font-size:12px;color:#8a7060;margin-bottom:28px;}
+.section-ttl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#4a3728;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #c8bfb0;}
+.opt{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border:1px solid #c8bfb0;margin-bottom:8px;cursor:pointer;background:#f5f1eb;transition:all .12s;}
+.opt:hover{border-color:#7c4d2a;background:#f0e8df;}
+.opt.selected{border-color:#7c4d2a;border-left:3px solid #7c4d2a;background:#f0e8df;}
+.opt input[type=radio]{margin-top:2px;accent-color:#7c4d2a;}
+.opt-ttl{font-size:13px;font-weight:700;color:#1e1410;margin-bottom:2px;}
+.opt-desc{font-size:12px;color:#8a7060;line-height:1.4;}
+.warn{background:#faeaea;border:1px solid #e8c0c0;border-left:3px solid #a82020;padding:12px 14px;font-size:12px;color:#a82020;margin-bottom:16px;line-height:1.5;}
+.info{background:#fdf3d0;border:1px solid #e8d090;border-left:3px solid #8a6200;padding:10px 14px;font-size:12px;color:#8a6200;margin-bottom:16px;line-height:1.5;}
+.drive-box{background:#f0e8df;border:1px solid #c8bfb0;border-left:3px solid #7c4d2a;padding:12px 14px;font-size:12px;color:#4a3728;margin-bottom:16px;line-height:1.6;}
+.drive-box strong{color:#7c4d2a;}
+.btn-drive{display:inline-block;margin-top:8px;padding:7px 16px;background:#7c4d2a;color:#fff;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;text-transform:uppercase;letter-spacing:.3px;}
+.btn-drive:hover{background:#5a3520;}
+.btn-drive.connected{background:#2d6a2d;}
+.btns{display:flex;gap:10px;margin-top:20px;}
+.btn{flex:1;padding:12px 0;background:#7c4d2a;color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;text-transform:uppercase;letter-spacing:.4px;transition:background .1s;}
+.btn:hover{background:#5a3520;}
+.btn.danger{background:#a82020;}
+.btn.danger:hover{background:#7a1515;}
+.btn:disabled{background:#c8bfb0;cursor:not-allowed;}
+.btn-cancel{padding:12px 20px;background:#f5f1eb;color:#4a3728;border:1px solid #c8bfb0;font-size:13px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;}
+.btn-cancel:hover{background:#ece7df;}
+.progress{display:none;margin-top:16px;}
+.progress-bar{height:4px;background:#c8bfb0;overflow:hidden;}
+.progress-fill{height:100%;width:0;background:#7c4d2a;transition:width .6s ease;}
+.progress-txt{font-size:11px;color:#8a7060;margin-top:6px;text-align:center;}
+.ok{display:none;background:#e6f2e6;border:1px solid #b8dbb8;border-left:3px solid #2d6a2d;padding:14px;font-size:13px;color:#2d6a2d;margin-top:16px;text-align:center;font-weight:700;}
+.status{font-size:11px;color:#8a7060;margin-top:6px;}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="logo">Glow<span>Fin</span></div>
+  <div class="sub">Reset do Sistema</div>
+
+  <!-- PASSO 1: Drive -->
+  <div class="section-ttl">Passo 1 — Conectar ao Google Drive</div>
+  <div class="drive-box">
+    Para apagar os dados do Drive (onde ficam salvos permanentemente), conecte sua conta primeiro.<br>
+    <strong>Sem isso, os dados voltam ao reabrir o sistema.</strong>
+    <br>
+    <button class="btn-drive" id="btnDrive" onclick="conectarDrive()">☁ Conectar Drive</button>
+    <div class="status" id="driveStatus">Não conectado</div>
+  </div>
+
+  <!-- PASSO 2: O que zerar -->
+  <div class="section-ttl" style="margin-top:16px;">Passo 2 — O que zerar?</div>
+
+  <label class="opt selected" id="opt1" onclick="selOpt(1)">
+    <input type="radio" name="modo" value="parcial" checked>
+    <div>
+      <div class="opt-ttl">Zerar dados operacionais (recomendado)</div>
+      <div class="opt-desc">Remove lançamentos, dívidas, insumos, cartão de terceiros.<br><strong>Mantém:</strong> empresas, plano de contas e categorias.</div>
+    </div>
+  </label>
+
+  <label class="opt" id="opt2" onclick="selOpt(2)">
+    <input type="radio" name="modo" value="total">
+    <div>
+      <div class="opt-ttl">⚠ Reset completo</div>
+      <div class="opt-desc">Apaga tudo — inclusive empresas, plano de contas e configurações. Sistema volta do zero.</div>
+    </div>
+  </label>
+
+  <div class="info" style="margin-top:12px;">
+    💡 Faça um <strong>⬇ Backup</strong> no sistema antes de continuar caso queira guardar os dados atuais.
+  </div>
+
+  <div class="btns">
+    <button class="btn-cancel" onclick="window.location.href='/'">← Cancelar</button>
+    <button class="btn danger" id="btnZerar" onclick="confirmarReset()">🗑 Zerar Agora</button>
+  </div>
+
+  <div class="progress" id="progressBox">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-txt" id="progressTxt">Aguarde...</div>
+  </div>
+  <div class="ok" id="ok">✅ Sistema zerado com sucesso! Redirecionando em instantes...</div>
+</div>
+
+<script>
+const CLIENT_ID = '927969872377-nqshkodc3q2qfhpilroocsfk00tf1gfj.apps.googleusercontent.com';
+const SCOPES    = 'https://www.googleapis.com/auth/drive.appdata';
+const FILE_NAME = 'glowfin-dados.json';
+let gapiReady=false, driveConectado=false, tokenClient=null, driveFileId=null;
+
+// Inicializar GAPI
+gapi.load('client', async ()=>{
+  await gapi.client.init({ discoveryDocs:['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] });
+  gapiReady=true;
+  tokenClient=google.accounts.oauth2.initTokenClient({
+    client_id:CLIENT_ID, scope:SCOPES,
+    callback: async(resp)=>{
+      if(resp.error) return;
+      driveConectado=true;
+      document.getElementById('btnDrive').textContent='✔ Drive Conectado';
+      document.getElementById('btnDrive').className='btn-drive connected';
+      document.getElementById('driveStatus').textContent='Conectado! Pronto para zerar o Drive também.';
+      document.getElementById('driveStatus').style.color='#2d6a2d';
+      // Buscar ID do arquivo
+      try{
+        const r=await gapi.client.drive.files.list({spaces:'appDataFolder',q:`name='${FILE_NAME}'`,fields:'files(id,name)'});
+        const files=r.result.files||[];
+        if(files.length>0) driveFileId=files[0].id;
+      }catch(e){}
+    }
+  });
+});
+
+function conectarDrive(){
+  if(!gapiReady){alert('Aguarde o carregamento...');return;}
+  tokenClient.requestAccessToken({prompt:''});
+}
+
+function selOpt(n){
+  document.getElementById('opt1').classList.toggle('selected',n===1);
+  document.getElementById('opt2').classList.toggle('selected',n===2);
+  document.querySelector('[value="parcial"]').checked=n===1;
+  document.querySelector('[value="total"]').checked=n===2;
+}
+
+async function confirmarReset(){
+  const modo=document.querySelector('input[name="modo"]:checked').value;
+  const resp=prompt('Digite CONFIRMO para executar o reset:');
+  if(resp?.trim().toUpperCase()!=='CONFIRMO'){alert('Reset cancelado.');return;}
+
+  const prog=document.getElementById('progressBox');
+  const fill=document.getElementById('progressFill');
+  const txt =document.getElementById('progressTxt');
+  prog.style.display='block';
+  document.getElementById('btnZerar').disabled=true;
+
+  const step=(pct,msg)=>{ fill.style.width=pct+'%'; txt.textContent=msg; };
+
+  try{
+    step(15,'Zerando localStorage...');
+    await delay(400);
+
+    // 1. Zerar localStorage
+    if(modo==='total'){
+      localStorage.clear();
+    } else {
+      const raw=localStorage.getItem('glowfin');
+      if(raw){
+        const S=JSON.parse(raw);
+        localStorage.setItem('glowfin', JSON.stringify({
+          empresas:   S.empresas   ||[],
+          planos:     S.planos     ||[],
+          categorias: S.categorias ||[],
+          lancamentos:[],dividas:[],reforcos:[],
+          insumos:[],movInsumos:[],donosCartao:[],comprasCartao:[]
+        }));
+      }
+    }
+    step(40,'localStorage zerado...');
+    await delay(400);
+
+    // 2. Zerar Drive se conectado
+    if(driveConectado && gapiReady && gapi.client.getToken()){
+      step(60,'Zerando Google Drive...');
+      await delay(400);
+
+      const estadoZerado = modo==='total'
+        ? { empresas:[{id:'emp1',nome:'Empresa Principal',cnpj:'',segmento:'Clínica Estética',cor:'#7c4d2a'}], lancamentos:[],dividas:[],reforcos:[],planos:[],categorias:[],insumos:[],movInsumos:[],donosCartao:[],comprasCartao:[] }
+        : (()=>{
+            try{
+              const S=JSON.parse(localStorage.getItem('glowfin')||'{}');
+              return { empresas:S.empresas||[], planos:S.planos||[], categorias:S.categorias||[], lancamentos:[],dividas:[],reforcos:[],insumos:[],movInsumos:[],donosCartao:[],comprasCartao:[] };
+            }catch(e){ return {lancamentos:[],dividas:[],reforcos:[]}; }
+          })();
+
+      const blob=new Blob([JSON.stringify(estadoZerado)],{type:'application/json'});
+
+      if(driveFileId){
+        // Atualizar arquivo existente
+        await gapi.client.request({
+          path:`/upload/drive/v3/files/${driveFileId}`,
+          method:'PATCH',
+          params:{uploadType:'media'},
+          body:JSON.stringify(estadoZerado)
+        });
+      } else {
+        // Criar novo arquivo zerado
+        const meta={name:FILE_NAME,parents:['appDataFolder']};
+        const form=new FormData();
+        form.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'}));
+        form.append('file',blob);
+        const tk=gapi.client.getToken();
+        await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{
+          method:'POST',
+          headers:{Authorization:`Bearer ${tk.access_token}`},
+          body:form
+        });
+      }
+      step(85,'Drive zerado!');
+      await delay(400);
+    } else {
+      step(85,'Drive não conectado — só localStorage foi zerado.');
+      await delay(600);
+    }
+
+    step(100,'Concluído!');
+    document.getElementById('ok').style.display='block';
+    prog.style.display='none';
+    await delay(2500);
+    window.location.href='/';
+
+  } catch(e){
+    txt.textContent='Erro: '+e.message;
+    fill.style.background='#a82020';
+  }
+}
+
+const delay=ms=>new Promise(r=>setTimeout(r,ms));
+</script>
+</body>
+</html>
