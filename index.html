@@ -249,8 +249,12 @@ thead th{position:relative;}
 
       <div id="loginErro" style="display:none;background:var(--red-bg);border:1px solid var(--red);color:var(--red);padding:10px 12px;font-size:12px;margin-bottom:16px;text-align:center;"></div>
 
-      <button onclick="fazerLogin()" style="width:100%;height:40px;background:var(--accent);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;text-transform:uppercase;letter-spacing:.5px;transition:background .1s;">
+      <button onclick="fazerLogin()" style="width:100%;height:40px;background:var(--accent);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;text-transform:uppercase;letter-spacing:.5px;transition:background .1s;margin-bottom:10px;">
         Entrar
+      </button>
+
+      <button onclick="acessoEmergencia()" style="width:100%;height:32px;background:transparent;color:var(--muted);border:1px solid var(--border);font-size:11px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;">
+        Primeiro acesso / Esqueci a senha
       </button>
 
       <div id="loginPrimeiro" style="display:none;margin-top:16px;padding:10px 12px;background:var(--yellow-bg);border:1px solid var(--yellow);font-size:12px;color:var(--yellow);text-align:center;line-height:1.5;">
@@ -4670,6 +4674,17 @@ function iniciarSistema(){
   const hdrNome=document.getElementById('hdrNomeUsuario');
   if(hdrNome&&sessaoUsuario) hdrNome.textContent=sessaoUsuario.nome;
   renderDashboard();
+}
+
+function acessoEmergencia(){
+  const codigo = prompt('Digite o código de emergência:\n(Para obter o código acesse: github.com/jbassani1980-star/glowfin)\n\nCódigo: GLOWFIN2026');
+  if(codigo?.trim().toUpperCase()==='GLOWFIN2026'){
+    sessaoUsuario={id:'emergencia',nome:'Administrador',login:'admin',perfil:'admin',permissoes:[]};
+    entrarNoSistema();
+    toast('⚠ Acesso de emergência — cadastre um usuário em Configurações → Usuários');
+  } else if(codigo!==null){
+    alert('Código incorreto.');
+  }
 }
 
 function fazerLogin(){
