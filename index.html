@@ -4030,41 +4030,120 @@ function renderFluxo(){
   const mIni=parseInt(document.getElementById('fluxoMesIni')?.value||'01');
   const aFim=parseInt(document.getElementById('fluxoAnoFim')?.value||HOJE.getFullYear());
   const mFim=parseInt(document.getElementById('fluxoMesFim')?.value||String(HOJE.getMonth()+1));
+  const el=document.getElementById('fluxoContent');
+
+  // Verificar se há lançamentos no período
+  const anoMesIni=`${aIni}-${String(mIni).padStart(2,'0')}`;
+  const anoMesFim=`${aFim}-${String(mFim).padStart(2,'0')}`;
+  let todosLanc=S.lancamentos.filter(l=>l.status!=='cancelado'&&l.data>=anoMesIni.substring(0,7)&&l.data<=anoMesFim+'~');
+  if(emp!=='todas') todosLanc=todosLanc.filter(l=>l.empresa===emp);
+
+  if(!S.lancamentos.length){
+    el.innerHTML=`<div class="empty" style="padding:64px;">
+      <div class="empty-icon">↕</div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:8px;">Nenhum lançamento cadastrado</div>
+      <div style="font-size:13px;color:var(--muted);">Vá em <strong>Lançamentos</strong> e cadastre suas receitas e despesas para visualizar o fluxo de caixa.</div>
+    </div>`;
+    return;
+  }
+
   const rows=[];let sAc=0;
   let cur=new Date(aIni,mIni-1,1);
   const fim=new Date(aFim,mFim-1,1);
+
   while(cur<=fim){
     const m=`${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}`;
     const lbl=cur.toLocaleDateString('pt-BR',{month:'short',year:'numeric'});
     let ml=S.lancamentos.filter(l=>l.data?.startsWith(m)&&l.status!=='cancelado');
-    if(emp!=='todas')ml=ml.filter(l=>l.empresa===emp);
+    if(emp!=='todas') ml=ml.filter(l=>l.empresa===emp);
     const en=ml.filter(l=>l.tipo==='receita').reduce((a,b)=>a+Number(b.valor),0);
     const sa=ml.filter(l=>l.tipo==='despesa').reduce((a,b)=>a+Number(b.valor),0);
     const sl=en-sa; sAc+=sl;
-    rows.push({m,lbl,en,sa,sl,sAc});
+    rows.push({m,lbl,en,sa,sl,sAc,nLanc:ml.length});
     cur=new Date(cur.getFullYear(),cur.getMonth()+1,1);
   }
-  if(!rows.length){document.getElementById('fluxoContent').innerHTML='<div class="empty" style="padding:48px;"><div class="empty-icon">↕</div>Nenhum dado no período selecionado.</div>';return;}
+
+  if(!rows.length){
+    el.innerHTML=`<div class="empty" style="padding:64px;">
+      <div class="empty-icon">↕</div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:8px;">Nenhum dado no período selecionado</div>
+      <div style="font-size:13px;color:var(--muted);">Selecione um período que contenha lançamentos cadastrados.</div>
+    </div>`;
+    return;
+  }
+
   const totEn=rows.reduce((a,b)=>a+b.en,0);
   const totSa=rows.reduce((a,b)=>a+b.sa,0);
-  document.getElementById('fluxoContent').innerHTML=`
+  const saldoFinal=rows[rows.length-1].sAc;
+  const maxVal=Math.max(...rows.map(r=>Math.max(r.en,r.sa)),1);
+
+  el.innerHTML=`
+    <!-- KPIs -->
     <div class="kpi-row" style="margin-bottom:20px;">
-      <div class="kpi-tile hl-g"><div class="kpi-lbl">Total Entradas</div><div class="kpi-val pos">${fmt(totEn)}</div></div>
-      <div class="kpi-tile hl-r"><div class="kpi-lbl">Total Saídas</div><div class="kpi-val neg">${fmt(totSa)}</div></div>
-      <div class="kpi-tile hl"><div class="kpi-lbl">Saldo do Período</div><div class="kpi-val ${rows[rows.length-1].sAc>=0?'pos':'neg'}">${fmt(rows[rows.length-1].sAc)}</div></div>
-      <div class="kpi-tile"><div class="kpi-lbl">Meses Analisados</div><div class="kpi-val neu">${rows.length}</div></div>
+      <div class="kpi-tile hl-g"><div class="kpi-lbl">Total Entradas</div><div class="kpi-val pos">${fmt(totEn)}</div><div class="kpi-sub">${rows.filter(r=>r.en>0).length} meses com receita</div></div>
+      <div class="kpi-tile hl-r"><div class="kpi-lbl">Total Saídas</div><div class="kpi-val neg">${fmt(totSa)}</div><div class="kpi-sub">${rows.filter(r=>r.sa>0).length} meses com despesa</div></div>
+      <div class="kpi-tile hl"><div class="kpi-lbl">Saldo do Período</div><div class="kpi-val ${saldoFinal>=0?'pos':'neg'}">${fmt(saldoFinal)}</div><div class="kpi-sub">${saldoFinal>=0?'Positivo ✔':'Negativo ✖'}</div></div>
+      <div class="kpi-tile"><div class="kpi-lbl">Meses Analisados</div><div class="kpi-val neu">${rows.length}</div><div class="kpi-sub">${rows.reduce((a,b)=>a+b.nLanc,0)} lançamentos</div></div>
     </div>
+
+    <!-- GRÁFICO DE BARRAS -->
+    <div style="background:var(--surface);border:1px solid var(--border);padding:20px;margin-bottom:20px;">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:16px;">Entradas vs Saídas por Mês</div>
+      <div style="display:flex;align-items:flex-end;gap:8px;height:120px;overflow-x:auto;padding-bottom:4px;">
+        ${rows.map(r=>{
+          const hEn=maxVal>0?Math.max(4,(r.en/maxVal)*110):0;
+          const hSa=maxVal>0?Math.max(4,(r.sa/maxVal)*110):0;
+          return`<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;min-width:40px;">
+            <div style="width:100%;display:flex;align-items:flex-end;justify-content:center;gap:2px;height:110px;">
+              <div style="width:45%;background:var(--green);height:${hEn}px;min-height:${r.en>0?4:0}px;title:'Entradas'" title="${fmt(r.en)}"></div>
+              <div style="width:45%;background:var(--red);height:${hSa}px;min-height:${r.sa>0?4:0}px;" title="${fmt(r.sa)}"></div>
+            </div>
+            <div style="font-size:9px;color:var(--muted);text-align:center;white-space:nowrap;">${r.lbl.split(' ')[0].toUpperCase()}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;gap:16px;margin-top:8px;font-size:11px;">
+        <div style="display:flex;align-items:center;gap:4px;"><div style="width:12px;height:12px;background:var(--green);"></div> Entradas</div>
+        <div style="display:flex;align-items:center;gap:4px;"><div style="width:12px;height:12px;background:var(--red);"></div> Saídas</div>
+      </div>
+    </div>
+
+    <!-- TABELA DETALHADA -->
     <div class="tbl-wrap">
-      <div class="tbl-bar"><span class="tbl-ttl">Fluxo Mensal Detalhado</span></div>
-      <table><thead><tr><th>Mês / Ano</th><th style="text-align:right">Entradas (R$)</th><th style="text-align:right">Saídas (R$)</th><th style="text-align:right">Saldo do Mês</th><th style="text-align:right">Saldo Acumulado</th></tr></thead>
-      <tbody>${rows.map(r=>`<tr>
-        <td style="font-weight:600;font-family:'IBM Plex Mono',monospace">${r.lbl.toUpperCase()}</td>
-        <td class="td-pos" style="text-align:right">${fmt(r.en)}</td>
-        <td class="td-neg" style="text-align:right">${fmt(r.sa)}</td>
-        <td class="${r.sl>=0?'td-pos':'td-neg'}" style="text-align:right;font-size:14px;">${r.sl>=0?'+':''}${fmt(r.sl)}</td>
-        <td class="${r.sAc>=0?'td-pos':'td-neg'}" style="text-align:right;font-size:14px;font-weight:700;">${fmt(r.sAc)}</td>
-      </tr>`).join('')}</tbody></table>
-    </div>`;
+      <div class="tbl-bar">
+        <span class="tbl-ttl">Fluxo Mensal Detalhado</span>
+        <span class="tbl-info">${emp==='todas'?'Todas as empresas':nomeEmp(emp)} · ${rows[0].lbl} a ${rows[rows.length-1].lbl}</span>
+      </div>
+      <table>
+        <thead><tr>
+          <th>Mês / Ano</th>
+          <th style="text-align:right">Entradas</th>
+          <th style="text-align:right">Saídas</th>
+          <th style="text-align:right">Saldo do Mês</th>
+          <th style="text-align:right">Saldo Acumulado</th>
+          <th style="text-align:right">Lançamentos</th>
+        </tr></thead>
+        <tbody>
+          ${rows.map(r=>`<tr style="${r.nLanc===0?'opacity:.5':''}">
+            <td style="font-weight:600;font-family:'IBM Plex Mono',monospace;">${r.lbl.toUpperCase()}</td>
+            <td class="td-pos" style="text-align:right;">${r.en>0?fmt(r.en):'—'}</td>
+            <td class="td-neg" style="text-align:right;">${r.sa>0?fmt(r.sa):'—'}</td>
+            <td class="${r.sl>=0?'td-pos':'td-neg'}" style="text-align:right;font-size:14px;">${r.nLanc>0?(r.sl>=0?'+':'')+fmt(r.sl):'—'}</td>
+            <td class="${r.sAc>=0?'td-pos':'td-neg'}" style="text-align:right;font-size:14px;font-weight:700;">${fmt(r.sAc)}</td>
+            <td style="text-align:right;font-size:12px;color:var(--muted);">${r.nLanc}</td>
+          </tr>`).join('')}
+          <tr style="background:var(--surface2);font-weight:700;border-top:2px solid var(--accent);">
+            <td>TOTAL</td>
+            <td class="td-pos" style="text-align:right;">${fmt(totEn)}</td>
+            <td class="td-neg" style="text-align:right;">${fmt(totSa)}</td>
+            <td class="${saldoFinal>=0?'td-pos':'td-neg'}" style="text-align:right;font-size:14px;">${saldoFinal>=0?'+':''}${fmt(saldoFinal)}</td>
+            <td class="${saldoFinal>=0?'td-pos':'td-neg'}" style="text-align:right;font-size:14px;">${fmt(saldoFinal)}</td>
+            <td style="text-align:right;font-size:12px;color:var(--muted);">${rows.reduce((a,b)=>a+b.nLanc,0)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `;
 }
 
 // EMPRESAS
